@@ -125,58 +125,101 @@ class HttpClient {
   private translateErrorMessage(error: any): Error {
     const errorTranslations: Record<string, string> = {
       "Header X-User-Id é obrigatório":
-        "Erro de autenticação. Faça login novamente.",
+        "Não foi possível identificar sua sessão. Entre novamente e tente outra vez.",
       "lectureCMSid é obrigatório":
         "Dados da aula não encontrados. Tente novamente.",
-      "Usuário não encontrado": "Usuário não encontrado. Verifique sua conta.",
+      "Usuário não encontrado":
+        "Não localizamos seu cadastro. Entre novamente para sincronizar sua conta.",
       "Lecture não encontrada":
         "Aula não encontrada. Verifique se ela ainda está disponível.",
       "Quiz não encontrado para esta lecture":
         "Esta aula não possui questionário disponível.",
+      "Nome não pode estar vazio": "Preencha seu nome para continuar.",
+      "Sobrenome não pode estar vazio":
+        "Preencha seu sobrenome para continuar.",
+      "Pelo menos um campo (lastName ou firstName) deve ser fornecido":
+        "Informe seu nome e sobrenome para continuar.",
       "Network Error":
-        "Erro de conexão. Verifique sua internet e tente novamente.",
+        "Não foi possível conectar ao servidor. Verifique sua internet e tente novamente.",
     };
 
-    let errorMessage = error.message || "Erro inesperado";
+    const serverMessage =
+      error.response?.data?.error ||
+      error.response?.data?.message ||
+      error.message ||
+      "";
+    const mappedMessage =
+      errorTranslations[serverMessage] ||
+      Object.entries(errorTranslations).find(([key]) =>
+        String(serverMessage).includes(key)
+      )?.[1];
 
-    // Verificar se é erro de resposta da API
-    if (error.response?.data?.error) {
-      errorMessage = error.response.data.error;
-    } else if (error.response?.data?.message) {
-      errorMessage = error.response.data.message;
+    const status = error.response?.status;
+    const url = String(error.config?.url || "").toLowerCase();
+
+    if (status === 400) {
+      return new Error(
+        mappedMessage ||
+          "Algumas informações não foram aceitas. Confira os campos e tente novamente."
+      );
     }
-
-    // Verificar se existe tradução específica
-    if (errorTranslations[errorMessage]) {
-      errorMessage = errorTranslations[errorMessage];
-    } else {
-      // Verificar se a mensagem contém alguma das chaves conhecidas
-      for (const [key, translation] of Object.entries(errorTranslations)) {
-        if (errorMessage.includes(key)) {
-          errorMessage = translation;
-          break;
-        }
+    if (status === 401) {
+      return new Error(
+        "Sua sessão não pôde ser validada. Entre novamente para continuar."
+      );
+    }
+    if (status === 403) {
+      return new Error(
+        "Sua conta não tem permissão para esta ação. Se isso parecer incorreto, fale com o suporte."
+      );
+    }
+    if (status === 404) {
+      if (url.includes("/api/user/complete")) {
+        return new Error(
+          "Não localizamos seu cadastro para salvar o perfil. Entre novamente; se o problema continuar, fale com o suporte."
+        );
       }
-    }
-
-    // Traduzir erros HTTP genéricos
-    if (error.response?.status) {
-      const status = error.response.status;
-      if (status === 400) {
-        errorMessage =
-          "Dados inválidos. Verifique as informações e tente novamente.";
-      } else if (status === 401) {
-        errorMessage = "Acesso negado. Faça login novamente.";
-      } else if (status === 403) {
-        errorMessage = "Você não tem permissão para realizar esta ação.";
-      } else if (status === 404) {
-        errorMessage = "Conteúdo não encontrado.";
-      } else if (status === 500) {
-        errorMessage = "Erro interno do servidor. Tente novamente mais tarde.";
+      if (url.endsWith("/api/user") || url.includes("/api/user?")) {
+        return new Error(
+          "Seu cadastro ainda não foi sincronizado. Aguarde alguns instantes e tente novamente."
+        );
       }
+      return new Error(
+        "O conteúdo solicitado não foi encontrado ou não está mais disponível."
+      );
+    }
+    if (status === 408 || status === 425 || status === 429) {
+      return new Error(
+        "O servidor está demorando para responder. Aguarde um pouco e tente novamente."
+      );
+    }
+    if (status && status >= 500) {
+      return new Error(
+        "O serviço está temporariamente instável. Tente novamente em alguns instantes."
+      );
     }
 
-    return new Error(errorMessage);
+    if (error.code === "ECONNABORTED" || error.code === "ETIMEDOUT") {
+      return new Error(
+        "A conexão demorou demais para responder. Verifique sua internet e tente novamente."
+      );
+    }
+    if (
+      error.code === "ERR_NETWORK" ||
+      error.message === "Network Error"
+    ) {
+      return new Error(
+        "Não foi possível conectar ao servidor. Verifique sua internet e tente novamente."
+      );
+    }
+
+    if (mappedMessage) {
+      return new Error(mappedMessage);
+    }
+
+    return new Error(
+      "Não foi possível concluir esta solicitação. Tente novamente; se persistir, fale com o suporte."
+    );
   }
 
   // Métodos HTTP
