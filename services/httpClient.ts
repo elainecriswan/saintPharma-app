@@ -60,10 +60,14 @@ class HttpClient {
 
         // Log da requisição (apenas em desenvolvimento)
         if (__DEV__) {
+          const loggedHeaders = { ...config.headers };
+          if (loggedHeaders.Authorization) {
+            loggedHeaders.Authorization = "[REDACTED]";
+          }
           console.log(
             `🚀 [HttpClient] ${config.method?.toUpperCase()} ${config.url}`,
             {
-              headers: config.headers,
+              headers: loggedHeaders,
               data: config.data,
             }
           );
@@ -105,6 +109,14 @@ class HttpClient {
 
         // Traduzir mensagens de erro
         const translatedError = this.translateErrorMessage(error);
+
+        // Preserve HTTP metadata so callers can distinguish 404, 409, 5xx and
+        // network failures when applying bounded retries or recovery logic.
+        Object.assign(translatedError, {
+          response: error.response,
+          status: error.response?.status,
+          code: error.code,
+        });
         return Promise.reject(translatedError);
       }
     );

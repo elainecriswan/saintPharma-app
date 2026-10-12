@@ -37,10 +37,9 @@ npm install
 Use `.env` na raiz (não commitar):
 
 ```env
-API_BASE_URL=https://www.saintpharmacursos.com.br/api
+API_BASE_URL=https://www.saintpharmacursos.com.br
 API_TOKEN=seu-token-aqui
 CLERK_PUBLISHABLE_KEY=pk_live_ou_pk_test...
-CLERK_SECRET_KEY=sk_live_ou_sk_test...
 ```
 
 Observações importantes:
@@ -61,16 +60,9 @@ npm run typecheck      # tsc --noEmit
 ## Build EAS
 
 - Perfis definidos em `eas.json`: `apk`, `production`, `preview`
-- Configure secrets no EAS (não colocar segredo em `eas.json`)
-
-Exemplo:
-
-```bash
-eas secret:create --scope project --name API_BASE_URL --value "https://..."
-eas secret:create --scope project --name API_TOKEN --value "..."
-eas secret:create --scope project --name CLERK_PUBLISHABLE_KEY --value "pk_..."
-eas secret:create --scope project --name CLERK_SECRET_KEY --value "sk_..."
-```
+- Configure as variáveis necessárias no EAS (não colocar valores em `eas.json`).
+- `CLERK_SECRET_KEY` é exclusiva do servidor; nunca a injete no app móvel.
+- `API_TOKEN` é embutido no cliente móvel pelo código atual, portanto pode ser extraído do APK. Não o trate como segredo nem como autenticação de usuário; as rotas devem validar uma sessão Clerk no servidor.
 
 ## 3) Estrutura do Projeto
 
@@ -173,8 +165,9 @@ eas secret:create --scope project --name CLERK_SECRET_KEY --value "sk_..."
 
 - Nunca commitar `.env`
 - Nunca hardcode de tokens/chaves em código
-- Nunca expor `API_TOKEN`/`CLERK_SECRET_KEY` em logs, prints, docs públicas
-- Em produção, use EAS Secrets
+- Nunca expor `API_TOKEN`/`CLERK_SECRET_KEY` em logs, prints ou docs públicas
+- `CLERK_SECRET_KEY` deve permanecer apenas no servidor
+- `API_TOKEN` está atualmente embutido no APK e precisa ser substituído por autenticação de usuário validada pelo servidor
 
 ## 7) Checklist Antes de Entregar Mudanças
 

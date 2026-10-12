@@ -12,8 +12,8 @@ export function useUserVerification() {
   const { signOut } = useAuth();
   const router = useRouter();
   const [isVerifying, setIsVerifying] = useState(false);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const attemptsRef = useRef(0);
 
   const verifyUserExists = async (clerkId: string): Promise<boolean> => {

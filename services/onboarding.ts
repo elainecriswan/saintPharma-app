@@ -5,7 +5,9 @@ import {
   OnboardingStatus,
 } from "@/types/onboarding";
 import { httpClient } from "./httpClient";
+import { userService } from "./userService";
 import { getApiBaseUrl, getApiToken } from "@/utils/env";
+import { withApiRetries } from "@/utils/apiRetry";
 
 class OnboardingService {
   /**
@@ -53,10 +55,26 @@ class OnboardingService {
       // Usar o endpoint /api/user/complete conforme documentação
       httpClient.setUserId(data.user.id); // ID do Clerk
 
-      const responseData = await httpClient.put("/api/user/complete", {
-        firstName: data.user.firstName,
-        lastName: data.user.lastName,
-      });
+      // O webhook do Clerk pode estar atrasado ou ter falhado. Garanta o
+      // registro local antes de chamar o endpoint que atualiza o perfil.
+      await userService.ensureUserExists(
+        data.user.id,
+        data.user.email,
+        data.user.firstName,
+        data.user.lastName,
+        data.user.imgUrl
+      );
+
+      const responseData = await withApiRetries(
+        () =>
+          httpClient.put("/api/user/complete", {
+            firstName: data.user.firstName,
+            lastName: data.user.lastName,
+          }),
+        undefined,
+        3,
+        400
+      );
 
       console.log("✅ [OnboardingService] Onboarding concluído com sucesso:", responseData);
 

@@ -33,8 +33,8 @@ export default function WaitingRegistrationScreen() {
       return;
     }
 
-    let timeoutId: NodeJS.Timeout;
-    let intervalId: NodeJS.Timeout;
+    let timeoutId: ReturnType<typeof setTimeout>;
+    let intervalId: ReturnType<typeof setInterval>;
     let currentAttempt = 0;
 
     const verifyUserExists = async (): Promise<boolean> => {

@@ -14,6 +14,12 @@ import {
   UserStatsResponse,
   UserSummaryResponse,
 } from "@/types/api";
+import {
+  isApiConflict,
+  isApiNotFound,
+  isRetryableApiError,
+  withApiRetries,
+} from "@/utils/apiRetry";
 import { httpClient } from "./httpClient";
 
 class UserService {
@@ -502,34 +508,48 @@ class UserService {
     lastName?: string,
     profileImage?: string
   ): Promise<User> {
-    try {
-      console.log("👤 [UserService] Verificando se usuário existe:", clerkId);
+    console.log("👤 [UserService] Garantindo usuário no banco:", clerkId);
 
-      // Primeiro, tenta buscar o usuário
-      try {
-        const userResponse = await this.getUser(clerkId);
-        console.log("✅ [UserService] Usuário já existe:", userResponse.user);
-        return userResponse.user;
-      } catch (error) {
-        // Se não encontrou, cria o usuário
-        console.log("👤 [UserService] Usuário não encontrado, criando...");
-        const createResponse = await this.createUser({
-          clerkId,
-          email,
-          firstName,
-          lastName,
-          profileImage,
-        });
-        console.log("✅ [UserService] Usuário criado:", createResponse.user);
-        return createResponse.user;
-      }
-    } catch (error) {
+    return withApiRetries(
+      async () => {
+        try {
+          const existingUser = await this.getUser(clerkId);
+          return existingUser.user;
+        } catch (lookupError) {
+          if (!isApiNotFound(lookupError)) {
+            throw lookupError;
+          }
+        }
+
+        try {
+          const createdUser = await this.createUser({
+            clerkId,
+            email,
+            firstName,
+            lastName,
+            profileImage,
+          });
+          return createdUser.user;
+        } catch (createError) {
+          // A entrega do webhook pode criar a linha entre o GET e o POST.
+          if (!isApiConflict(createError)) {
+            throw createError;
+          }
+
+          const userCreatedByWebhook = await this.getUser(clerkId);
+          return userCreatedByWebhook.user;
+        }
+      },
+      (error) => isRetryableApiError(error) || isApiNotFound(error),
+      3,
+      400
+    ).catch((error) => {
       console.error(
         "❌ [UserService] Erro ao garantir existência do usuário:",
         error
       );
       throw error;
-    }
+    });
   }
 }
 

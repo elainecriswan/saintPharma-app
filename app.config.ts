@@ -27,7 +27,6 @@ export default ({ config }: ConfigContext): ExpoConfig => {
   const apiBaseUrl = cleanEnvVar(process.env.API_BASE_URL);
   const apiToken = cleanEnvVar(process.env.API_TOKEN);
   const clerkPublishableKey = cleanEnvVar(process.env.CLERK_PUBLISHABLE_KEY);
-  const clerkSecretKey = cleanEnvVar(process.env.CLERK_SECRET_KEY);
 
   // Log para debug (apenas em desenvolvimento)
   if (process.env.NODE_ENV !== "production") {
@@ -35,7 +34,6 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       hasApiBaseUrl: !!apiBaseUrl,
       hasApiToken: !!apiToken,
       hasClerkPublishableKey: !!clerkPublishableKey,
-      hasClerkSecretKey: !!clerkSecretKey,
       apiBaseUrl: apiBaseUrl
         ? `${apiBaseUrl.substring(0, 30)}...`
         : "NÃO ENCONTRADO",
@@ -106,7 +104,6 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       apiBaseUrl,
       apiToken,
       clerkPublishableKey,
-      clerkSecretKey,
     },
   };
 };

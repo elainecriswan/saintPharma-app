@@ -7,13 +7,12 @@ import Constants from 'expo-constants';
  * 
  * Fallback para process.env caso Constants não esteja disponível (útil durante desenvolvimento)
  */
-export const getEnvVar = (key: 'apiBaseUrl' | 'apiToken' | 'clerkPublishableKey' | 'clerkSecretKey'): string => {
+export const getEnvVar = (key: 'apiBaseUrl' | 'apiToken' | 'clerkPublishableKey'): string => {
   // Mapear chaves do extra para variáveis de ambiente
   const envKeyMap: Record<string, string> = {
     apiBaseUrl: 'API_BASE_URL',
     apiToken: 'API_TOKEN',
     clerkPublishableKey: 'CLERK_PUBLISHABLE_KEY',
-    clerkSecretKey: 'CLERK_SECRET_KEY',
   };
 
   // Tentar obter de Constants.expoConfig.extra primeiro (build)
@@ -57,12 +56,5 @@ export const getApiToken = (): string => {
  */
 export const getClerkPublishableKey = (): string => {
   return getEnvVar('clerkPublishableKey');
-};
-
-/**
- * Obtém a chave secreta do Clerk
- */
-export const getClerkSecretKey = (): string => {
-  return getEnvVar('clerkSecretKey');
 };
 
